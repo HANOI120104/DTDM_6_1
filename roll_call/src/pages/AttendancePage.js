@@ -61,16 +61,13 @@ const AttendancePage = () => {
                 }
                 // Ưu tiên lấy studentId, fallback sang student_id
                 const sid = currentUser.studentId || currentUser.student_id;
-                // Gọi đúng API mới ở backend Flask
                 const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/api/classes/student/${sid}`;
                 const res = await fetch(apiUrl);
                 const data = await res.json();
                 if (res.ok && data.success) {
                     setMyClasses(data.classes || []);
-                    console.log("myClasses state:", data.classes);
                 } else {
                     setMyClasses([]);
-                    console.log("myClasses state: [] (no classes)");
                 }
             } catch (err) {
                 setMyClasses([]);
@@ -218,9 +215,15 @@ const AttendancePage = () => {
             message.error('Please capture/upload an image and select a class');
             return;
         }
+        // Ưu tiên lấy student_id (field), fallback sang studentId hoặc id
+        const studentId =
+            currentUser?.student_id ||
+            currentUser?.studentId ||
+            currentUser?.id;
+
         const payload = {
             imageBase64: capturedImage,
-            studentId: currentUser?.id || currentUser?.studentId || currentUser?.student_id,
+            studentId: studentId,
             classId: selectedClass
         };
         console.log("Payload gửi lên API:", JSON.stringify(payload, null, 2));
@@ -233,7 +236,6 @@ const AttendancePage = () => {
             const data = await res.json();
             if (res.ok && data.recognized !== undefined) {
                 setRecognitionComplete(true);
-                // Khi cần setRecognizedStudents, chỉ set dữ liệu thực tế trả về từ API
                 setRecognizedStudents([{ ...payload, recognized: data.recognized, similarity: data.similarity, image_url: data.image_url }]);
                 setCurrentStep(2);
                 message.success(data.recognized ? 'Attendance recorded!' : 'Face not recognized');

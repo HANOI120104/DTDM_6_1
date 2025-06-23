@@ -31,22 +31,24 @@ import { AuthContext } from '../App';
 const { Title } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:5002/api/students"; // Đổi nếu backend chạy port khác
-const CLASSES_API_URL = "http://localhost:5002/api/classes"; // Thêm dòng này
+const API_URL = "http://localhost:5002/api/students";
+const CLASSES_API_URL = "http://localhost:5002/api/classes";
+const USERS_API_URL = "http://localhost:5002/api/students"; // lấy danh sách user role=student
 
 const StudentsPage = () => {
     const { currentUser } = useContext(AuthContext);
     const role = currentUser?.role || 'student';
     const [searchText, setSearchText] = useState('');
     const [students, setStudents] = useState([]);
-    const [classes, setClasses] = useState([]); // Thêm state cho danh sách lớp
+    const [classes, setClasses] = useState([]);
+    const [users, setUsers] = useState([]); // Thêm state cho danh sách user
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
     const [form] = Form.useForm();
     const [imageUrl, setImageUrl] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Fetch students from backend
+    // Fetch students
     const fetchStudents = async () => {
         try {
             const res = await fetch(API_URL);
@@ -58,7 +60,7 @@ const StudentsPage = () => {
         }
     };
 
-    // Fetch classes from backend
+    // Fetch classes
     const fetchClasses = async () => {
         try {
             const res = await fetch(CLASSES_API_URL);
@@ -70,9 +72,22 @@ const StudentsPage = () => {
         }
     };
 
+    // Fetch users (role=student)
+    const fetchUsers = async () => {
+        try {
+            const res = await fetch(USERS_API_URL);
+            const data = await res.json();
+            if (data.success) setUsers(data.students);
+            else setUsers([]);
+        } catch {
+            setUsers([]);
+        }
+    };
+
     useEffect(() => {
         fetchStudents();
-        fetchClasses(); // Gọi luôn khi mount
+        fetchClasses();
+        fetchUsers();
     }, []);
 
     // Filter students based on search
@@ -106,25 +121,34 @@ const StudentsPage = () => {
     // Handle form submission for add/edit student
     const handleSubmit = async (values) => {
         setLoading(true);
+
+        // Tìm user đã chọn từ dropdown
+        const selectedUser = users.find(u => u.id === values.userId);
+        if (!selectedUser) {
+            message.error("Please select a student from the list.");
+            setLoading(false);
+            return;
+        }
+
         const payload = {
-            student_id: values.studentId,
-            name: values.name,
-            email: values.email,
+            user_id: selectedUser.id, // uid
+            student_id: selectedUser.studentId, // mã sinh viên
+            name: selectedUser.name,
+            email: selectedUser.email,
             class_id: values.classId,
-            avatar_url: imageUrl,
+            image_base64: imageUrl,
             status: values.status || 'active',
         };
+
         try {
             let res, data;
             if (editingStudent) {
-                // Update student
                 res = await fetch(`${API_URL}/${editingStudent.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
             } else {
-                // Add new student
                 res = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -358,30 +382,24 @@ const StudentsPage = () => {
                     </div>
 
                     <Form.Item
-                        name="name"
-                        label="Full Name"
-                        rules={[{ required: true, message: 'Please enter student name' }]}
+                        name="userId"
+                        label="Select Student"
+                        rules={[{ required: true, message: 'Please select a student' }]}
                     >
-                        <Input placeholder="Enter full name" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="studentId"
-                        label="Student ID"
-                        rules={[{ required: true, message: 'Please enter student ID' }]}
-                    >
-                        <Input placeholder="Enter student ID" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="email"
-                        label="Email"
-                        rules={[
-                            { required: true, message: 'Please enter email' },
-                            { type: 'email', message: 'Please enter a valid email' }
-                        ]}
-                    >
-                        <Input placeholder="Enter email address" />
+                        <Select
+                            showSearch
+                            placeholder="Select a student"
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                            }
+                        >
+                            {users.map(user => (
+                                <Option key={user.id} value={user.id}>
+                                    {user.name} ({user.studentId}) - {user.email}
+                                </Option>
+                            ))}
+                        </Select>
                     </Form.Item>
 
                     <Form.Item

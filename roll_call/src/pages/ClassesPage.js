@@ -52,7 +52,7 @@ const ClassesPage = () => {
     const [loading, setLoading] = useState(false);
     const [teachers, setTeachers] = useState([]);
 
-    // Fetch classes from backend
+    // Fetch all classes (for teacher)
     const fetchClasses = async () => {
         try {
             const res = await fetch(API_URL);
@@ -64,9 +64,29 @@ const ClassesPage = () => {
         }
     };
 
+    // Fetch only my classes (for student)
+    const fetchMyClasses = async () => {
+        if (!currentUser?.studentId && !currentUser?.student_id) return;
+        const sid = currentUser.studentId || currentUser.student_id;
+        try {
+            const res = await fetch(`${API_URL}/student/${sid}`);
+            const data = await res.json();
+            if (data.success) setClasses(data.classes);
+            else setClasses([]);
+        } catch {
+            setClasses([]);
+        }
+    };
+
+    // Gọi fetch đúng API theo role
     useEffect(() => {
-        fetchClasses();
-    }, []);
+        if (role === 'student') {
+            fetchMyClasses();
+        } else {
+            fetchClasses();
+        }
+        // eslint-disable-next-line
+    }, [role, currentUser]);
 
     // Lấy danh sách giáo viên từ backend (giả sử API: /api/teachers)
     useEffect(() => {
@@ -110,7 +130,7 @@ const ClassesPage = () => {
     // Lọc lớp theo teacher (chỉ các lớp do teacher hiện tại tạo)
     const myClasses = role === 'teacher'
         ? classes.filter(c => c.instructor && currentUser && c.instructor === currentUser.id)
-        : filteredClasses;
+        : classes; // với sinh viên, classes đã là danh sách lớp của mình
 
     // Show modal for adding/editing class
     const showModal = (classItem = null) => {
@@ -338,30 +358,18 @@ const ClassesPage = () => {
                     }
                     key="2"
                 >
-                    <Card>
-                        {role === 'student' ? (
-                            <Table
-                                dataSource={filteredClasses}
-                                columns={columns.filter(col => col.key !== 'actions')}
-                                rowKey="id"
-                                pagination={{
-                                    pageSize: 10,
-                                    showSizeChanger: true,
-                                    pageSizeOptions: ['10', '20', '50'],
-                                }}
-                            />
-                        ) : (
-                            <Table
-                                dataSource={myClasses}
-                                columns={columns}
-                                rowKey="id"
-                                pagination={{
-                                    pageSize: 10,
-                                    showSizeChanger: true,
-                                    pageSizeOptions: ['10', '20', '50'],
-                                }}
-                            />
-                        )}
+                    <Card title="My Classes" className="mb-6">
+                        <Table
+                            dataSource={myClasses}
+                            columns={[
+                                { title: 'Class Name', dataIndex: 'name', key: 'name' },
+                                { title: 'Code', dataIndex: 'code', key: 'code' },
+                                { title: 'Room', dataIndex: 'room', key: 'room' },
+                                { title: 'Schedule', dataIndex: 'schedule', key: 'schedule' }
+                            ]}
+                            rowKey="id"
+                            pagination={false}
+                        />
                     </Card>
                 </TabPane>
             </Tabs>

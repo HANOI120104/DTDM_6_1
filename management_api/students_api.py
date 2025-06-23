@@ -74,12 +74,13 @@ def get_students():
 @students_api.route('/api/students', methods=['POST'])
 def add_student_api():
     data = request.get_json()
-    student_id = data['student_id']
-    name = data['name']
-    email = data['email']
+    user_id = data['user_id']  # documentId của user đã đăng ký (uid)
+    student_id = data.get('student_id', '')  # mã sinh viên, chỉ là field
     class_id = data.get('class_id', '')
     status = data.get('status', 'active')
     image_base64 = data.get('image_base64', '')
+    name = data.get('name', '')
+    email = data.get('email', '')
     avatar_url = ''
 
     try:
@@ -87,31 +88,38 @@ def add_student_api():
 
         # Upload ảnh lên GCS nếu có
         if image_base64:
-            avatar_url = upload_student_image(student_id, image_base64)
+            avatar_url = upload_student_image(user_id, image_base64)
 
-        # Thêm hoặc cập nhật user vào collection users
-        user_doc = {
-            'name': name,
-            'email': email,
-            'role': 'student',
-            'avatar_url': avatar_url,
-            'status': status,
-            'createdAt': datetime.utcnow()
-        }
-        db.collection('users').document(student_id).set(user_doc, merge=True)
+        # Cập nhật thông tin user (nếu có)
+        user_update = {}
+        if student_id:
+            user_update['student_id'] = student_id
+        if avatar_url:
+            user_update['avatar_url'] = avatar_url
+        if status:
+            user_update['status'] = status
+        if name:
+            user_update['name'] = name
+        if email:
+            user_update['email'] = email
+        if user_update:
+            user_ref = db.collection('users').document(user_id)
+            if not user_ref.get().exists:
+                return jsonify({'error': f'User {user_id} chưa đăng ký tài khoản!'}), 400
+            user_ref.update(user_update)
 
-        # Thêm student_id vào mảng students của lớp
+        # Thêm user_id vào mảng students của lớp
         if class_id:
             class_ref = db.collection('classes').document(class_id)
             class_doc = class_ref.get()
             if class_doc.exists:
                 class_data = class_doc.to_dict()
                 students_list = class_data.get('students', [])
-                if student_id not in students_list:
-                    students_list.append(student_id)
+                if user_id not in students_list:
+                    students_list.append(user_id)
                     class_ref.update({'students': students_list})
 
-        return jsonify({'success': True, 'student': {**user_doc, 'id': student_id}})
+        return jsonify({'success': True, 'user_id': user_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
