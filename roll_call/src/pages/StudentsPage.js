@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
     Typography,
     Card,
@@ -31,72 +31,49 @@ import { AuthContext } from '../App';
 const { Title } = Typography;
 const { Option } = Select;
 
-// Mock data for students
-const MOCK_STUDENTS = [
-    {
-        id: 1,
-        name: 'John Doe',
-        studentId: 'ST1001',
-        email: 'john.doe@example.com',
-        class: 'Web Development',
-        photoUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-        status: 'active'
-    },
-    {
-        id: 2,
-        name: 'Jane Smith',
-        studentId: 'ST1002',
-        email: 'jane.smith@example.com',
-        class: 'Database Systems',
-        photoUrl: 'https://randomuser.me/api/portraits/women/1.jpg',
-        status: 'active'
-    },
-    {
-        id: 3,
-        name: 'Bob Johnson',
-        studentId: 'ST1003',
-        email: 'bob.johnson@example.com',
-        class: 'Machine Learning',
-        photoUrl: 'https://randomuser.me/api/portraits/men/2.jpg',
-        status: 'inactive'
-    },
-    {
-        id: 4,
-        name: 'Alice Brown',
-        studentId: 'ST1004',
-        email: 'alice.brown@example.com',
-        class: 'Computer Networks',
-        photoUrl: 'https://randomuser.me/api/portraits/women/2.jpg',
-        status: 'active'
-    },
-    {
-        id: 5,
-        name: 'Charlie Wilson',
-        studentId: 'ST1005',
-        email: 'charlie.wilson@example.com',
-        class: 'Web Development',
-        photoUrl: 'https://randomuser.me/api/portraits/men/3.jpg',
-        status: 'active'
-    },
-];
-
-// Mock data for classes
-const MOCK_CLASSES = [
-    { id: 1, name: 'Web Development', code: 'CS101' },
-    { id: 2, name: 'Database Systems', code: 'CS202' },
-    { id: 3, name: 'Machine Learning', code: 'CS301' },
-    { id: 4, name: 'Computer Networks', code: 'CS401' },
-];
+const API_URL = "http://localhost:5002/api/students"; // Đổi nếu backend chạy port khác
+const CLASSES_API_URL = "http://localhost:5002/api/classes"; // Thêm dòng này
 
 const StudentsPage = () => {
     const { currentUser } = useContext(AuthContext);
+    const role = currentUser?.role || 'student';
     const [searchText, setSearchText] = useState('');
-    const [students, setStudents] = useState(MOCK_STUDENTS);
+    const [students, setStudents] = useState([]);
+    const [classes, setClasses] = useState([]); // Thêm state cho danh sách lớp
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
     const [form] = Form.useForm();
     const [imageUrl, setImageUrl] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Fetch students from backend
+    const fetchStudents = async () => {
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            if (data.success) setStudents(data.students);
+            else message.error("Failed to fetch students");
+        } catch (err) {
+            message.error("Network error");
+        }
+    };
+
+    // Fetch classes from backend
+    const fetchClasses = async () => {
+        try {
+            const res = await fetch(CLASSES_API_URL);
+            const data = await res.json();
+            if (data.success) setClasses(data.classes);
+            else message.error("Failed to fetch classes");
+        } catch (err) {
+            message.error("Network error");
+        }
+    };
+
+    useEffect(() => {
+        fetchStudents();
+        fetchClasses(); // Gọi luôn khi mount
+    }, []);
 
     // Filter students based on search
     const filteredStudents = students.filter(
@@ -115,10 +92,10 @@ const StudentsPage = () => {
                 name: student.name,
                 studentId: student.studentId,
                 email: student.email,
-                class: student.class,
+                classId: student.classId,
                 status: student.status,
             });
-            setImageUrl(student.photoUrl);
+            setImageUrl(student.avatar_url);
         } else {
             form.resetFields();
             setImageUrl('');
@@ -127,52 +104,74 @@ const StudentsPage = () => {
     };
 
     // Handle form submission for add/edit student
-    const handleSubmit = (values) => {
+    const handleSubmit = async (values) => {
         setLoading(true);
-
-        setTimeout(() => {
+        const payload = {
+            student_id: values.studentId,
+            name: values.name,
+            email: values.email,
+            class_id: values.classId,
+            avatar_url: imageUrl,
+            status: values.status || 'active',
+        };
+        try {
+            let res, data;
             if (editingStudent) {
-                // Update existing student
-                const updatedStudents = students.map(student =>
-                    student.id === editingStudent.id
-                        ? { ...student, ...values, photoUrl: imageUrl || student.photoUrl }
-                        : student
-                );
-                setStudents(updatedStudents);
-                message.success('Student updated successfully!');
+                // Update student
+                res = await fetch(`${API_URL}/${editingStudent.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
             } else {
                 // Add new student
-                const newStudent = {
-                    id: students.length + 1,
-                    ...values,
-                    photoUrl: imageUrl || `https://randomuser.me/api/portraits/${Math.random() > 0.5 ? 'men' : 'women'}/${Math.floor(Math.random() * 10)}.jpg`,
-                };
-                setStudents([...students, newStudent]);
-                message.success('Student added successfully!');
+                res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
             }
-
-            setLoading(false);
-            setIsModalVisible(false);
-        }, 1000);
+            data = await res.json();
+            if (data.success) {
+                message.success(editingStudent ? 'Student updated' : 'Student added');
+                fetchStudents();
+                setIsModalVisible(false);
+                form.resetFields();
+                setImageUrl('');
+            } else {
+                message.error(data.error || 'Operation failed');
+            }
+        } catch (err) {
+            message.error('Network error');
+        }
+        setLoading(false);
     };
 
     // Delete student
-    const handleDelete = (studentId) => {
-        const updatedStudents = students.filter(student => student.id !== studentId);
-        setStudents(updatedStudents);
-        message.success('Student deleted successfully!');
+    const handleDelete = async (studentId) => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_URL}/${studentId}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                message.success('Student deleted');
+                fetchStudents();
+            } else {
+                message.error(data.error || 'Delete failed');
+            }
+        } catch (err) {
+            message.error('Network error');
+        }
+        setLoading(false);
     };
 
     // Handle image upload
     const handleImageUpload = (info) => {
-        if (info.file.status === 'uploading') {
-            setLoading(true);
-            return;
-        }
-
-        if (info.file.status === 'done') {
-            // Get image URL from response
-            getBase64(info.file.originFileObj, imageUrl => {
+        // Sử dụng beforeUpload để lấy base64 trực tiếp, không upload lên server
+        if (info.file) {
+            getBase64(info.file, (imageUrl) => {
                 setImageUrl(imageUrl);
                 setLoading(false);
             });
@@ -272,13 +271,15 @@ const StudentsPage = () => {
             <Card className="mb-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                     <Space className="mb-4 md:mb-0">
-                        <Button
-                            type="primary"
-                            icon={<UserAddOutlined />}
-                            onClick={() => showModal()}
-                        >
-                            Add Student
-                        </Button>
+                        {role === 'teacher' && (
+                            <Button
+                                type="primary"
+                                icon={<UserAddOutlined />}
+                                onClick={() => showModal()}
+                            >
+                                Add Student
+                            </Button>
+                        )}
                         <Button
                             icon={<FileExcelOutlined />}
                             onClick={handleBulkImport}
@@ -332,8 +333,14 @@ const StudentsPage = () => {
                             listType="picture-card"
                             className="avatar-uploader"
                             showUploadList={false}
-                            action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
-                            onChange={handleImageUpload}
+                            beforeUpload={file => {
+                                setLoading(true);
+                                getBase64(file, (imageUrl) => {
+                                    setImageUrl(imageUrl);
+                                    setLoading(false);
+                                });
+                                return false; // Ngăn không upload lên server
+                            }}
                         >
                             {imageUrl ? (
                                 <img
@@ -378,13 +385,13 @@ const StudentsPage = () => {
                     </Form.Item>
 
                     <Form.Item
-                        name="class"
+                        name="classId"
                         label="Class"
                         rules={[{ required: true, message: 'Please select class' }]}
                     >
                         <Select placeholder="Select class">
-                            {MOCK_CLASSES.map(cls => (
-                                <Option key={cls.id} value={cls.name}>
+                            {classes.map(cls => (
+                                <Option key={cls.id} value={cls.id}>
                                     {cls.name} ({cls.code})
                                 </Option>
                             ))}

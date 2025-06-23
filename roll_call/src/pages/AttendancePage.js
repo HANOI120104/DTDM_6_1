@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import {
     Typography,
     Card,
@@ -30,23 +30,6 @@ import { AuthContext } from '../App';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
-// Mock data for classes
-const MOCK_CLASSES = [
-    { id: 1, name: 'Web Development', code: 'CS101' },
-    { id: 2, name: 'Database Systems', code: 'CS202' },
-    { id: 3, name: 'Machine Learning', code: 'CS301' },
-    { id: 4, name: 'Computer Networks', code: 'CS401' },
-];
-
-// Mock recognized students data
-const MOCK_RECOGNIZED_STUDENTS = [
-    { id: 1, name: 'John Doe', studentId: 'ST1001', confidence: 0.95, status: 'success' },
-    { id: 2, name: 'Jane Smith', studentId: 'ST1002', confidence: 0.98, status: 'success' },
-    { id: 3, name: 'Bob Johnson', studentId: 'ST1003', confidence: 0.72, status: 'warning' },
-    { id: 4, name: 'Alice Brown', studentId: 'ST1004', confidence: 0.45, status: 'error' },
-    { id: 5, name: 'Charlie Wilson', studentId: 'ST1005', confidence: 0.88, status: 'success' },
-];
-
 const AttendancePage = () => {
     const { currentUser } = useContext(AuthContext);
     const isTeacher = currentUser?.role === 'teacher';
@@ -63,40 +46,77 @@ const AttendancePage = () => {
     const [recognizedStudents, setRecognizedStudents] = useState([]);
     const [currentStep, setCurrentStep] = useState(0);
     const [showManualModal, setShowManualModal] = useState(false);
+    const [myClasses, setMyClasses] = useState([]);
+    const [loadingClasses, setLoadingClasses] = useState(true);
 
-    // Start camera stream
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: 640,
-                    height: 480,
-                    facingMode: 'user'
+    // Fetch student's classes (chỉ lấy các lớp mà sinh viên này tham gia)
+    useEffect(() => {
+        const fetchMyClasses = async () => {
+            setLoadingClasses(true);
+            try {
+                if (!currentUser?.studentId && !currentUser?.student_id) {
+                    setMyClasses([]);
+                    setLoadingClasses(false);
+                    return;
                 }
-            });
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                streamRef.current = stream;
-                setCameraActive(true);
+                // Ưu tiên lấy studentId, fallback sang student_id
+                const sid = currentUser.studentId || currentUser.student_id;
+                // Gọi đúng API mới ở backend Flask
+                const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/api/classes/student/${sid}`;
+                const res = await fetch(apiUrl);
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    setMyClasses(data.classes || []);
+                    console.log("myClasses state:", data.classes);
+                } else {
+                    setMyClasses([]);
+                    console.log("myClasses state: [] (no classes)");
+                }
+            } catch (err) {
+                setMyClasses([]);
+                console.log("Error fetching myClasses:", err);
             }
-        } catch (err) {
-            message.error('Unable to access camera: ' + err.message);
-        }
-    };
+            setLoadingClasses(false);
+        };
+        if (currentUser?.studentId || currentUser?.student_id) fetchMyClasses();
+    }, [currentUser?.studentId, currentUser?.student_id]);
 
-    // Stop camera stream
-    const stopCamera = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-            setCameraActive(false);
+    // Khi cameraActive chuyển sang true, mới thực sự mở camera
+    useEffect(() => {
+        if (cameraActive && videoRef.current) {
+            (async () => {
+                try {
+                    console.log("Đang mở camera...");
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: 640,
+                            height: 480,
+                            facingMode: 'user'
+                        }
+                    });
+                    videoRef.current.srcObject = stream;
+                    streamRef.current = stream;
+                    console.log("Camera đã mở thành công");
+                } catch (err) {
+                    message.error('Unable to access camera: ' + err.message);
+                    console.error("Lỗi mở camera:", err);
+                    setCameraActive(false);
+                }
+            })();
         }
+    }, [cameraActive]);
+
+    // Đổi startCamera thành chỉ setCameraActive
+    const startCamera = () => {
+        setCameraActive(true);
     };
 
     // Capture photo from camera
     const capturePhoto = () => {
-        if (!videoRef.current || !photoRef.current) return;
+        if (!videoRef.current || !photoRef.current) {
+            console.log("Không có videoRef hoặc photoRef khi chụp ảnh");
+            return;
+        }
 
         const video = videoRef.current;
         const photo = photoRef.current;
@@ -105,6 +125,7 @@ const AttendancePage = () => {
         // Set canvas dimensions to match video
         photo.width = video.videoWidth;
         photo.height = video.videoHeight;
+        console.log("Kích thước video:", video.videoWidth, video.videoHeight);
 
         // Draw the video frame to the canvas
         ctx.drawImage(video, 0, 0, photo.width, photo.height);
@@ -113,9 +134,23 @@ const AttendancePage = () => {
         const imageUrl = photo.toDataURL('image/jpeg');
         setCapturedImage(imageUrl);
 
+        // Log dạng JSON
+        console.log("Ảnh base64 dạng JSON:", JSON.stringify({ imageBase64: imageUrl }, null, 2));
+
         // Stop the camera after capturing
         stopCamera();
         setCurrentStep(1);
+    };
+
+    // Stop camera stream
+    const stopCamera = () => {
+        if (streamRef.current) {
+            console.log("Đang tắt camera...");
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+            setCameraActive(false);
+            console.log("Camera đã tắt");
+        }
     };
 
     // Retry capturing photo
@@ -162,7 +197,8 @@ const AttendancePage = () => {
         setTimeout(() => {
             setProcessing(false);
             setRecognitionComplete(true);
-            setRecognizedStudents(MOCK_RECOGNIZED_STUDENTS);
+            // XÓA HOÀN TOÀN MOCK_RECOGNIZED_STUDENTS và mọi chỗ sử dụng nó
+            setRecognizedStudents([]);
             setCurrentStep(2);
         }, 3000);
     };
@@ -177,9 +213,36 @@ const AttendancePage = () => {
     };
 
     // Submit attendance records
-    const submitAttendance = () => {
-        message.success('Attendance records have been submitted successfully!');
-        resetProcess();
+    const submitAttendance = async () => {
+        if (!capturedImage || !selectedClass) {
+            message.error('Please capture/upload an image and select a class');
+            return;
+        }
+        const payload = {
+            imageBase64: capturedImage,
+            studentId: currentUser?.id || currentUser?.studentId || currentUser?.student_id,
+            classId: selectedClass
+        };
+        console.log("Payload gửi lên API:", JSON.stringify(payload, null, 2));
+        try {
+            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/attendance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.recognized !== undefined) {
+                setRecognitionComplete(true);
+                // Khi cần setRecognizedStudents, chỉ set dữ liệu thực tế trả về từ API
+                setRecognizedStudents([{ ...payload, recognized: data.recognized, similarity: data.similarity, image_url: data.image_url }]);
+                setCurrentStep(2);
+                message.success(data.recognized ? 'Attendance recorded!' : 'Face not recognized');
+            } else {
+                message.error(data.error || 'Attendance failed');
+            }
+        } catch (err) {
+            message.error('Network error');
+        }
     };
 
     // For manual attendance entry
@@ -303,11 +366,18 @@ const AttendancePage = () => {
                                         <Divider>Or</Divider>
 
                                         <Upload
-                                            action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
                                             listType="picture"
                                             maxCount={1}
-                                            onChange={handleFileUpload}
                                             showUploadList={false}
+                                            beforeUpload={file => {
+                                                setUploading(true);
+                                                getBase64(file, (imageUrl) => {
+                                                    setCapturedImage(imageUrl);
+                                                    setUploading(false);
+                                                    setCurrentStep(1);
+                                                });
+                                                return false; // Ngăn không upload lên server
+                                            }}
                                         >
                                             <Button
                                                 icon={<UploadOutlined />}
@@ -339,8 +409,10 @@ const AttendancePage = () => {
                                                 placeholder="Select a class"
                                                 onChange={(value) => setSelectedClass(value)}
                                                 className="w-full"
+                                                loading={loadingClasses}
+                                            // disabled={loadingClasses || myClasses.length === 0} // Tạm thời bỏ để test
                                             >
-                                                {MOCK_CLASSES.map(cls => (
+                                                {myClasses.map(cls => (
                                                     <Option key={cls.id} value={cls.id}>
                                                         {cls.name} ({cls.code})
                                                     </Option>
@@ -526,8 +598,10 @@ const AttendancePage = () => {
                                             placeholder="Select a class"
                                             onChange={(value) => setSelectedClass(value)}
                                             className="w-full"
+                                            loading={loadingClasses}
+                                        // disabled={loadingClasses || myClasses.length === 0}
                                         >
-                                            {MOCK_CLASSES.map(cls => (
+                                            {myClasses.map(cls => (
                                                 <Option key={cls.id} value={cls.id}>
                                                     {cls.name} ({cls.code})
                                                 </Option>
@@ -619,7 +693,7 @@ const AttendancePage = () => {
                         rules={[{ required: true, message: 'Please select a class' }]}
                     >
                         <Select placeholder="Select class">
-                            {MOCK_CLASSES.map(cls => (
+                            {myClasses.map(cls => (
                                 <Option key={cls.id} value={cls.id}>
                                     {cls.name} ({cls.code})
                                 </Option>

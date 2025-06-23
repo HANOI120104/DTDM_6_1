@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 // Auth Components
 import Login from './components/auth/Login';
@@ -17,44 +20,67 @@ import StudentsPage from './pages/StudentsPage';
 import ClassesPage from './pages/ClassesPage';
 import ReportsPage from './pages/ReportsPage';
 
-// Mock Auth Context - Would be replaced with actual Firebase Auth
+// Auth Context
 export const AuthContext = React.createContext();
 
 function App() {
-  // Mock auth state - In a real app, this would use Firebase Auth
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [init, setInit] = useState(true);
 
-  // Mock login function - Would be replaced with Firebase Auth
-  const login = (email, password) => {
+  // Đăng nhập bằng Firebase Auth và lấy role từ Firestore
+  const login = async (email, password) => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      if (email === 'teacher@example.com' && password === 'password') {
-        setCurrentUser({
-          uid: '123',
-          email,
-          displayName: 'Teacher User',
-          role: 'teacher',
-          photoURL: 'https://randomuser.me/api/portraits/men/1.jpg'
-        });
-      } else if (email === 'student@example.com' && password === 'password') {
-        setCurrentUser({
-          uid: '456',
-          email,
-          displayName: 'Student User',
-          role: 'student',
-          photoURL: 'https://randomuser.me/api/portraits/women/1.jpg'
-        });
-      }
-      setLoading(false);
-    }, 1000);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      // Lấy thông tin user từ Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      let userData = userDoc.exists() ? userDoc.data() : {};
+      setCurrentUser({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        ...userData
+      });
+    } catch (err) {
+      setCurrentUser(null);
+      throw err;
+    }
+    setLoading(false);
   };
 
-  // Mock logout function
-  const logout = () => {
+  // Đăng xuất
+  const logout = async () => {
+    await signOut(auth);
     setCurrentUser(null);
   };
+
+  // Theo dõi trạng thái đăng nhập
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        let userData = userDoc.exists() ? userDoc.data() : {};
+        setCurrentUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          ...userData
+        });
+      } else {
+        setCurrentUser(null);
+      }
+      setInit(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const contextValue = useMemo(() => ({ currentUser, login, logout, loading }), [currentUser, loading]);
+
+  if (init) return null; // hoặc loading spinner
 
   return (
     <ConfigProvider
@@ -64,12 +90,11 @@ function App() {
         },
       }}
     >
-      <AuthContext.Provider value={{ currentUser, login, logout, loading }}>
+      <AuthContext.Provider value={contextValue}>
         <Router>
           <Routes>
             <Route path="/login" element={!currentUser ? <Login /> : <Navigate to="/" />} />
             <Route path="/register" element={!currentUser ? <Register /> : <Navigate to="/" />} />
-
             <Route path="/" element={currentUser ? <AppLayout /> : <Navigate to="/login" />}>
               <Route index element={<Dashboard />} />
               <Route path="attendance" element={<AttendancePage />} />

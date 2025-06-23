@@ -35,6 +35,7 @@ const AppLayout = () => {
     const { token } = theme.useToken();
 
     // Menu items for sidebar
+    console.log('DEBUG currentUser:', currentUser);
     const menuItems = [
         {
             key: '/',
@@ -46,25 +47,23 @@ const AppLayout = () => {
             icon: <CalendarOutlined />,
             label: <Link to="/attendance">Attendance</Link>,
         },
-        {
+        // Chỉ giáo viên mới thấy Students
+        ...(currentUser?.role === 'teacher' ? [{
             key: '/students',
             icon: <TeamOutlined />,
             label: <Link to="/students">Students</Link>,
-            // Only show to teachers
-            style: currentUser?.role === 'student' ? { display: 'none' } : {},
-        },
+        }] : []),
         {
             key: '/classes',
             icon: <BookOutlined />,
             label: <Link to="/classes">Classes</Link>,
         },
-        {
+        // Chỉ giáo viên mới thấy Reports
+        ...(currentUser?.role === 'teacher' ? [{
             key: '/reports',
             icon: <BarChartOutlined />,
             label: <Link to="/reports">Reports</Link>,
-            // Only show to teachers
-            style: currentUser?.role === 'student' ? { display: 'none' } : {},
-        },
+        }] : []),
     ];
 
     // User dropdown menu
@@ -185,4 +184,4 @@ const AppLayout = () => {
     );
 };
 
-export default AppLayout; 
+export default AppLayout;

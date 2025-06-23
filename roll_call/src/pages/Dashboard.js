@@ -1,47 +1,56 @@
-import React, { useContext } from 'react';
-import { Typography, Card, Row, Col, Statistic, Table, Badge, Button, Progress, Tabs } from 'antd';
+import React, { useContext, useEffect, useState } from 'react';
+import { Typography, Card, Row, Col, Statistic, Table, Badge, Button, Progress, Tabs, Spin, message } from 'antd';
 import {
-    UserOutlined,
     TeamOutlined,
     CalendarOutlined,
     CheckCircleOutlined,
     ClockCircleOutlined,
     ArrowUpOutlined,
-    ArrowDownOutlined,
     ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { AuthContext } from '../App';
 
 const { Title } = Typography;
 
-// Mock data for dashboard
-const MOCK_CLASSES = [
-    { id: 1, name: 'Web Development', code: 'CS101', totalStudents: 35, presentToday: 28 },
-    { id: 2, name: 'Database Systems', code: 'CS202', totalStudents: 42, presentToday: 36 },
-    { id: 3, name: 'Machine Learning', code: 'CS301', totalStudents: 30, presentToday: 25 },
-    { id: 4, name: 'Computer Networks', code: 'CS401', totalStudents: 38, presentToday: 30 },
-];
-
-const MOCK_RECENT_ATTENDANCE = [
-    { id: 1, name: 'John Doe', class: 'Web Development', time: '08:45 AM', status: 'present' },
-    { id: 2, name: 'Jane Smith', class: 'Database Systems', time: '09:15 AM', status: 'present' },
-    { id: 3, name: 'Bob Johnson', class: 'Machine Learning', time: '10:00 AM', status: 'late' },
-    { id: 4, name: 'Alice Brown', class: 'Computer Networks', time: '11:30 AM', status: 'absent' },
-    { id: 5, name: 'Charlie Wilson', class: 'Web Development', time: '01:15 PM', status: 'present' },
-];
-
-// Mock attendance history for student
-const MOCK_STUDENT_ATTENDANCE = [
-    { id: 1, className: 'Web Development', date: '2023-06-10', status: 'present' },
-    { id: 2, className: 'Database Systems', date: '2023-06-09', status: 'present' },
-    { id: 3, className: 'Machine Learning', date: '2023-06-08', status: 'absent' },
-    { id: 4, className: 'Computer Networks', date: '2023-06-07', status: 'late' },
-    { id: 5, className: 'Web Development', date: '2023-06-06', status: 'present' },
-];
-
 const Dashboard = () => {
     const { currentUser } = useContext(AuthContext);
     const isTeacher = currentUser?.role === 'teacher';
+
+    console.log("currentUser:", currentUser);
+    console.log("isTeacher:", isTeacher);
+
+    // State cho dữ liệu dashboard
+    const [loading, setLoading] = useState(true);
+    const [teacherData, setTeacherData] = useState(null);
+    const [studentData, setStudentData] = useState(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const endpoint = isTeacher
+                    ? '/api/dashboard/teacher'
+                    : '/api/dashboard/student?uid=' + currentUser.uid;
+                const res = await fetch(process.env.REACT_APP_API_URL + endpoint, {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': currentUser.uid
+                    }
+                });
+                if (!res.ok) throw new Error('Fetch failed');
+                const data = await res.json();
+                console.log("API data:", data);
+                if (isTeacher) setTeacherData(data);
+                else setStudentData(data);
+            } catch (err) {
+                console.error("Fetch error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [isTeacher, currentUser.uid]);
 
     // Table columns for recent attendance
     const attendanceColumns = [
@@ -142,181 +151,175 @@ const Dashboard = () => {
         },
     ];
 
+    // Thay thế MOCK_* bằng dữ liệu từ API
     return (
         <div>
             <Title level={3}>Dashboard</Title>
-
-            {isTeacher ? (
-                // Teacher Dashboard
-                <>
-                    {/* Stats Row */}
-                    <Row gutter={16} className="mb-6">
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card>
-                                <Statistic
-                                    title="Total Students"
-                                    value={145}
-                                    prefix={<TeamOutlined />}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card>
-                                <Statistic
-                                    title="Present Today"
-                                    value={119}
-                                    prefix={<CheckCircleOutlined />}
-                                    valueStyle={{ color: '#3f8600' }}
-                                    suffix={<span className="text-sm">(82%)</span>}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card>
-                                <Statistic
-                                    title="Absent Today"
-                                    value={26}
-                                    prefix={<ExclamationCircleOutlined />}
-                                    valueStyle={{ color: '#cf1322' }}
-                                    suffix={<span className="text-sm">(18%)</span>}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} lg={6}>
-                            <Card>
-                                <Statistic
-                                    title="Attendance Rate"
-                                    value={82}
-                                    prefix={<ArrowUpOutlined />}
-                                    valueStyle={{ color: '#3f8600' }}
-                                    suffix="%"
-                                />
-                            </Card>
-                        </Col>
-                    </Row>
-
-                    {/* Classes and Recent Attendance */}
-                    <Row gutter={16}>
-                        <Col xs={24} lg={14}>
-                            <Card
-                                title="Today's Classes"
-                                extra={<Button type="link">View All</Button>}
-                                className="mb-6"
-                            >
-                                <Table
-                                    dataSource={MOCK_CLASSES}
-                                    columns={classesColumns}
-                                    rowKey="id"
-                                    size="middle"
-                                    pagination={false}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} lg={10}>
-                            <Card
-                                title="Recent Attendance"
-                                extra={<Button type="link">View All</Button>}
-                                className="mb-6"
-                            >
-                                <Table
-                                    dataSource={MOCK_RECENT_ATTENDANCE}
-                                    columns={attendanceColumns}
-                                    rowKey="id"
-                                    size="small"
-                                    pagination={false}
-                                />
-                            </Card>
-                        </Col>
-                    </Row>
-                </>
+            {loading ? (
+                <Spin size="large" />
+            ) : isTeacher ? (
+                teacherData && (
+                    <>
+                        {/* Stats Row */}
+                        <Row gutter={16} className="mb-6">
+                            <Col xs={24} sm={12} lg={6}>
+                                <Card>
+                                    <Statistic
+                                        title="Total Students"
+                                        value={teacherData.total_students}
+                                        prefix={<TeamOutlined />}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={12} lg={6}>
+                                <Card>
+                                    <Statistic
+                                        title="Present Today"
+                                        value={teacherData.present_today}
+                                        prefix={<CheckCircleOutlined />}
+                                        valueStyle={{ color: '#3f8600' }}
+                                        suffix={<span className="text-sm">
+                                            ({Math.round((teacherData.present_today / teacherData.total_students) * 100)}%)
+                                        </span>}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={12} lg={6}>
+                                <Card>
+                                    <Statistic
+                                        title="Absent Today"
+                                        value={teacherData.absent_today}
+                                        prefix={<ExclamationCircleOutlined />}
+                                        valueStyle={{ color: '#cf1322' }}
+                                        suffix={<span className="text-sm">
+                                            ({Math.round((teacherData.absent_today / teacherData.total_students) * 100)}%)
+                                        </span>}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={12} lg={6}>
+                                <Card>
+                                    <Statistic
+                                        title="Attendance Rate"
+                                        value={teacherData.attendance_rate}
+                                        prefix={<ArrowUpOutlined />}
+                                        valueStyle={{ color: '#3f8600' }}
+                                        suffix="%"
+                                    />
+                                </Card>
+                            </Col>
+                        </Row>
+                        {/* Classes and Recent Attendance */}
+                        <Row gutter={16}>
+                            <Col xs={24} lg={14}>
+                                <Card
+                                    title="Today's Classes"
+                                    extra={<Button type="link">View All</Button>}
+                                    className="mb-6"
+                                >
+                                    <Table
+                                        dataSource={teacherData.classes}
+                                        columns={classesColumns}
+                                        rowKey="id"
+                                        size="middle"
+                                        pagination={false}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} lg={10}>
+                                <Card
+                                    title="Recent Attendance"
+                                    extra={<Button type="link">View All</Button>}
+                                    className="mb-6"
+                                >
+                                    <Table
+                                        dataSource={teacherData.recent_attendance}
+                                        columns={attendanceColumns}
+                                        rowKey="id"
+                                        size="small"
+                                        pagination={false}
+                                    />
+                                </Card>
+                            </Col>
+                        </Row>
+                    </>
+                )
             ) : (
-                // Student Dashboard
-                <>
-                    {/* Student Stats */}
-                    <Row gutter={16} className="mb-6">
-                        <Col xs={24} sm={8}>
-                            <Card>
-                                <Statistic
-                                    title="Total Classes"
-                                    value={4}
-                                    prefix={<CalendarOutlined />}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                            <Card>
-                                <Statistic
-                                    title="Attendance Rate"
-                                    value={85}
-                                    prefix={<CheckCircleOutlined />}
-                                    valueStyle={{ color: '#3f8600' }}
-                                    suffix="%"
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                            <Card>
-                                <Statistic
-                                    title="Next Class"
-                                    value="Web Dev"
-                                    prefix={<ClockCircleOutlined />}
-                                    suffix="(1:30 PM)"
-                                />
-                            </Card>
-                        </Col>
-                    </Row>
-
-                    {/* Student Attendance History */}
-                    <Card
-                        title="My Attendance History"
-                        className="mb-6"
-                    >
-                        <Tabs defaultActiveKey="1">
-                            <Tabs.TabPane tab="Recent" key="1">
-                                <Table
-                                    dataSource={MOCK_STUDENT_ATTENDANCE}
-                                    columns={studentAttendanceColumns}
-                                    rowKey="id"
-                                    pagination={false}
-                                />
-                            </Tabs.TabPane>
-                            <Tabs.TabPane tab="By Class" key="2">
-                                <div className="py-4">
-                                    <Row gutter={16}>
-                                        <Col span={12}>
-                                            <Card title="Web Development" bordered={false}>
-                                                <Statistic
-                                                    title="Attendance Rate"
-                                                    value={90}
-                                                    suffix="%"
-                                                    valueStyle={{ color: '#3f8600' }}
-                                                />
-                                                <div className="mt-2">
-                                                    <span>Present: 18</span>
-                                                    <span className="ml-4">Absent: 2</span>
-                                                </div>
-                                            </Card>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Card title="Database Systems" bordered={false}>
-                                                <Statistic
-                                                    title="Attendance Rate"
-                                                    value={75}
-                                                    suffix="%"
-                                                    valueStyle={{ color: '#faad14' }}
-                                                />
-                                                <div className="mt-2">
-                                                    <span>Present: 15</span>
-                                                    <span className="ml-4">Absent: 5</span>
-                                                </div>
-                                            </Card>
-                                        </Col>
-                                    </Row>
-                                </div>
-                            </Tabs.TabPane>
-                        </Tabs>
-                    </Card>
-                </>
+                studentData && (
+                    <>
+                        {/* Student Stats */}
+                        <Row gutter={16} className="mb-6">
+                            <Col xs={24} sm={8}>
+                                <Card>
+                                    <Statistic
+                                        title="Total Classes"
+                                        value={studentData.total_classes}
+                                        prefix={<CalendarOutlined />}
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={8}>
+                                <Card>
+                                    <Statistic
+                                        title="Attendance Rate"
+                                        value={studentData.attendance_rate}
+                                        prefix={<CheckCircleOutlined />}
+                                        valueStyle={{ color: '#3f8600' }}
+                                        suffix="%"
+                                    />
+                                </Card>
+                            </Col>
+                            <Col xs={24} sm={8}>
+                                <Card>
+                                    <Statistic
+                                        title="Next Class"
+                                        value={studentData.next_class?.name}
+                                        prefix={<ClockCircleOutlined />}
+                                        suffix={`(${studentData.next_class?.time})`}
+                                    />
+                                </Card>
+                            </Col>
+                        </Row>
+                        {/* Student Attendance History */}
+                        <Card
+                            title="My Attendance History"
+                            className="mb-6"
+                        >
+                            <Tabs defaultActiveKey="1">
+                                <Tabs.TabPane tab="Recent" key="1">
+                                    <Table
+                                        dataSource={studentData.attendance_history}
+                                        columns={studentAttendanceColumns}
+                                        rowKey="id"
+                                        pagination={false}
+                                    />
+                                </Tabs.TabPane>
+                                <Tabs.TabPane tab="By Class" key="2">
+                                    <div className="py-4">
+                                        <Row gutter={16}>
+                                            {studentData.by_class.map((cls, idx) => (
+                                                <Col span={12} key={idx}>
+                                                    <Card title={cls.className} bordered={false}>
+                                                        <Statistic
+                                                            title="Attendance Rate"
+                                                            value={cls.attendance_rate}
+                                                            suffix="%"
+                                                            valueStyle={{ color: cls.attendance_rate >= 85 ? '#3f8600' : '#faad14' }}
+                                                        />
+                                                        <div className="mt-2">
+                                                            <span>Present: {cls.present}</span>
+                                                            <span className="ml-4">Absent: {cls.absent}</span>
+                                                        </div>
+                                                    </Card>
+                                                </Col>
+                                            ))}
+                                        </Row>
+                                    </div>
+                                </Tabs.TabPane>
+                            </Tabs>
+                        </Card>
+                    </>
+                )
             )}
         </div>
     );

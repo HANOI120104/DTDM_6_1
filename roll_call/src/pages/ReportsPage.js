@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     Typography,
     Card,
@@ -23,36 +23,65 @@ import {
     FilePdfOutlined,
     FileExcelOutlined
 } from '@ant-design/icons';
+import { AuthContext } from '../App';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-// Mock data for attendance reports
-const MOCK_ATTENDANCE_DATA = [
-    { id: 1, name: 'John Doe', studentId: 'ST1001', present: 18, absent: 2, late: 0, attendanceRate: 90 },
-    { id: 2, name: 'Jane Smith', studentId: 'ST1002', present: 15, absent: 4, late: 1, attendanceRate: 75 },
-    { id: 3, name: 'Bob Johnson', studentId: 'ST1003', present: 20, absent: 0, late: 0, attendanceRate: 100 },
-    { id: 4, name: 'Alice Brown', studentId: 'ST1004', present: 16, absent: 3, late: 1, attendanceRate: 80 },
-    { id: 5, name: 'Charlie Wilson', studentId: 'ST1005', present: 17, absent: 2, late: 1, attendanceRate: 85 },
-    { id: 6, name: 'Diana Prince', studentId: 'ST1006', present: 14, absent: 5, late: 1, attendanceRate: 70 },
-    { id: 7, name: 'Bruce Wayne', studentId: 'ST1007', present: 19, absent: 1, late: 0, attendanceRate: 95 },
-    { id: 8, name: 'Clark Kent', studentId: 'ST1008', present: 10, absent: 8, late: 2, attendanceRate: 50 },
-];
-
-// Mock data for class attendance rates
-const MOCK_CLASS_ATTENDANCE = [
-    { class: 'Web Development', attendanceRate: 87, studentCount: 35 },
-    { class: 'Database Systems', attendanceRate: 78, studentCount: 42 },
-    { class: 'Machine Learning', attendanceRate: 92, studentCount: 30 },
-    { class: 'Computer Networks', attendanceRate: 81, studentCount: 38 },
-];
+const API_BASE = "http://localhost:5002/api/reports"; // Đổi nếu backend chạy port khác
 
 const ReportsPage = () => {
+    const { currentUser } = useContext(AuthContext);
+    const isTeacher = currentUser?.role === 'teacher';
+
     const [selectedClass, setSelectedClass] = useState('all');
     const [dateRange, setDateRange] = useState(null);
     const [reportType, setReportType] = useState('attendance');
     const [chartType, setChartType] = useState('bar');
+    const [attendanceData, setAttendanceData] = useState([]);
+    const [classAttendance, setClassAttendance] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch attendance data
+    const fetchAttendanceData = async () => {
+        setLoading(true);
+        try {
+            let url = `${API_BASE}/attendance`;
+            const params = [];
+            if (selectedClass && selectedClass !== "all") params.push(`class=${selectedClass}`);
+            // Nếu muốn truyền dateRange, thêm vào params ở đây
+            if (params.length) url += "?" + params.join("&");
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.success) setAttendanceData(data.data);
+            else setAttendanceData([]);
+        } catch (err) {
+            setAttendanceData([]);
+        }
+        setLoading(false);
+    };
+
+    // Fetch class attendance summary
+    const fetchClassAttendance = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/class`);
+            const data = await res.json();
+            if (data.success) setClassAttendance(data.data);
+            else setClassAttendance([]);
+        } catch (err) {
+            setClassAttendance([]);
+        }
+    };
+
+    useEffect(() => {
+        fetchAttendanceData();
+        // eslint-disable-next-line
+    }, [selectedClass, dateRange, reportType]);
+
+    useEffect(() => {
+        fetchClassAttendance();
+    }, []);
 
     // Table columns for attendance report
     const attendanceColumns = [
@@ -96,7 +125,6 @@ const ReportsPage = () => {
                 } else if (rate < 85) {
                     color = 'orange';
                 }
-
                 return (
                     <div>
                         <Progress
@@ -112,20 +140,26 @@ const ReportsPage = () => {
         },
     ];
 
-    // Handle export to PDF
-    const handleExportPDF = () => {
-        console.log('Export to PDF');
-    };
-
-    // Handle export to Excel
-    const handleExportExcel = () => {
-        console.log('Export to Excel');
+    // Export handlers
+    const handleExport = async (type) => {
+        try {
+            const res = await fetch(`${API_BASE}/export`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type }),
+            });
+            const data = await res.json();
+            if (data.success && data.url) {
+                window.open(data.url, "_blank");
+            }
+        } catch (err) {
+            // handle error
+        }
     };
 
     return (
         <div>
             <Title level={3}>Attendance Reports</Title>
-
             <Card className="mb-6">
                 <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
                     <div>
@@ -142,7 +176,6 @@ const ReportsPage = () => {
                             <Option value="net">Computer Networks</Option>
                         </Select>
                     </div>
-
                     <div>
                         <Text strong>Date Range:</Text>
                         <RangePicker
@@ -150,7 +183,6 @@ const ReportsPage = () => {
                             onChange={setDateRange}
                         />
                     </div>
-
                     <div>
                         <Text strong>Report Type:</Text>
                         <Select
@@ -162,30 +194,35 @@ const ReportsPage = () => {
                             <Option value="summary">Summary</Option>
                         </Select>
                     </div>
-
                     <Space style={{ marginLeft: 'auto' }}>
                         <Button
                             icon={<FilePdfOutlined />}
-                            onClick={handleExportPDF}
+                            onClick={() => handleExport("pdf")}
                         >
                             Export PDF
                         </Button>
                         <Button
                             icon={<FileExcelOutlined />}
-                            onClick={handleExportExcel}
+                            onClick={() => handleExport("excel")}
                         >
                             Export Excel
                         </Button>
                     </Space>
                 </div>
-
                 {/* Statistics Summary */}
                 <Row gutter={16} className="mb-6">
                     <Col xs={24} sm={12} md={6}>
                         <Card>
                             <Statistic
                                 title="Average Attendance"
-                                value={83}
+                                value={
+                                    attendanceData.length
+                                        ? (
+                                            attendanceData.reduce((sum, s) => sum + s.attendanceRate, 0) /
+                                            attendanceData.length
+                                        ).toFixed(0)
+                                        : 0
+                                }
                                 suffix="%"
                                 valueStyle={{ color: '#3f8600' }}
                             />
@@ -195,7 +232,7 @@ const ReportsPage = () => {
                         <Card>
                             <Statistic
                                 title="Total Students"
-                                value={145}
+                                value={attendanceData.length}
                             />
                         </Card>
                     </Col>
@@ -203,7 +240,7 @@ const ReportsPage = () => {
                         <Card>
                             <Statistic
                                 title="Classes"
-                                value={4}
+                                value={classAttendance.length}
                             />
                         </Card>
                     </Col>
@@ -217,9 +254,7 @@ const ReportsPage = () => {
                         </Card>
                     </Col>
                 </Row>
-
                 <Divider />
-
                 {/* Chart Display Options */}
                 <div className="flex justify-between mb-4">
                     <Title level={4}>Attendance Report</Title>
@@ -233,47 +268,17 @@ const ReportsPage = () => {
                         <Radio.Button value="pie"><PieChartOutlined /> Pie</Radio.Button>
                     </Radio.Group>
                 </div>
-
                 {/* Chart Placeholder */}
                 <div
                     className="bg-gray-100 rounded-lg mb-6 flex items-center justify-center"
                     style={{ height: 300 }}
                 >
-                    {chartType === 'bar' && (
-                        <div className="text-center">
-                            <BarChartOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-                            <p>Bar Chart Visualization Would Appear Here</p>
-                            <p className="text-gray-500 text-sm">
-                                Shows attendance data for each student/class
-                            </p>
-                        </div>
-                    )}
-
-                    {chartType === 'line' && (
-                        <div className="text-center">
-                            <LineChartOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-                            <p>Line Chart Visualization Would Appear Here</p>
-                            <p className="text-gray-500 text-sm">
-                                Shows attendance trends over time
-                            </p>
-                        </div>
-                    )}
-
-                    {chartType === 'pie' && (
-                        <div className="text-center">
-                            <PieChartOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-                            <p>Pie Chart Visualization Would Appear Here</p>
-                            <p className="text-gray-500 text-sm">
-                                Shows proportion of present/absent/late
-                            </p>
-                        </div>
-                    )}
+                    {/* Chart rendering logic here */}
                 </div>
-
                 {/* Class Attendance Comparison */}
                 <Title level={4}>Class Attendance Comparison</Title>
                 <div className="mb-6">
-                    {MOCK_CLASS_ATTENDANCE.map(cls => (
+                    {classAttendance.map(cls => (
                         <div key={cls.class} className="mb-4">
                             <div className="flex justify-between mb-1">
                                 <Text>{cls.class}</Text>
@@ -286,15 +291,14 @@ const ReportsPage = () => {
                         </div>
                     ))}
                 </div>
-
                 <Divider />
-
                 {/* Data Table */}
                 <Title level={4}>Student Attendance Details</Title>
                 <Table
-                    dataSource={MOCK_ATTENDANCE_DATA}
+                    dataSource={attendanceData}
                     columns={attendanceColumns}
                     rowKey="id"
+                    loading={loading}
                     pagination={{
                         pageSize: 10,
                         showSizeChanger: true,
@@ -306,4 +310,4 @@ const ReportsPage = () => {
     );
 };
 
-export default ReportsPage; 
+export default ReportsPage;

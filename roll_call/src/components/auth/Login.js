@@ -25,9 +25,20 @@ const Login = () => {
     const { login, loading } = useContext(AuthContext);
     const [error, setError] = useState('');
 
-    const onFinish = (values) => {
+    const onFinish = async (values) => {
         setError('');
-        login(values.email, values.password);
+        try {
+            await login(values.email, values.password);
+        } catch (err) {
+            // Xử lý lỗi Firebase Auth
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Tài khoản hoặc mật khẩu không đúng. Vui lòng kiểm tra lại!');
+            } else if (err.code === 'auth/too-many-requests') {
+                setError('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau!');
+            } else {
+                setError(err.message || 'Đăng nhập thất bại.');
+            }
+        }
     };
 
     return (
@@ -134,4 +145,4 @@ const Login = () => {
     );
 };
 
-export default Login; 
+export default Login;

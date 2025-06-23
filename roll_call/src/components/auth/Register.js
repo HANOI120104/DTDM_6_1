@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     Form,
@@ -18,6 +18,8 @@ import {
     IdcardOutlined,
     CalendarOutlined
 } from '@ant-design/icons';
+import { createUserWithEmailAndPassword, updateProfile, getAuth } from "firebase/auth";
+import { auth } from "../../firebase";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -25,19 +27,65 @@ const { Option } = Select;
 const Register = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isTeacher, setIsTeacher] = useState(false);
     const navigate = useNavigate();
 
-    const onFinish = (values) => {
+    const onFinish = async (values) => {
         setLoading(true);
         setError('');
-
-        // Simulate registration process
-        setTimeout(() => {
+        try {
+            const response = await fetch(process.env.REACT_APP_API_URL + '/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName: values.fullName,
+                    email: values.email,
+                    studentId: values.role === 'student' ? values.studentId : undefined,
+                    teacherId: values.role === 'teacher' ? values.studentId : undefined,
+                    role: values.role,
+                    password: values.password
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                setError(data.error || 'Registration failed');
+                setLoading(false);
+                return;
+            }
+            // Sau khi đăng ký thành công, có thể tự động đăng nhập ở đây nếu muốn
+            navigate('/login');
+        } catch (error) {
             setLoading(false);
-            // Instead of actually registering, just show a message
-            setError('Registration is disabled in this demo. Please use the demo accounts.');
-        }, 1500);
+            setError(error.message);
+        }
     };
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const auth = getAuth();
+                const user = auth.currentUser;
+                if (!user) throw new Error("Not logged in");
+                const token = await user.getIdToken();
+
+                const endpoint = isTeacher ? '/dashboard/teacher' : '/dashboard/student';
+                const res = await fetch(process.env.REACT_APP_API_URL + endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                if (!res.ok) throw new Error('Fetch failed');
+                const data = await res.json();
+                // ...set state như bình thường...
+            } catch (err) {
+                // ...handle error...
+            }
+            setLoading(false);
+        };
+        fetchData();
+    }, [isTeacher]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -109,7 +157,7 @@ const Register = () => {
                         name="role"
                         rules={[{ required: true, message: 'Please select your role!' }]}
                     >
-                        <Select placeholder="Select your role">
+                        <Select placeholder="Select your role" onChange={(value) => setIsTeacher(value === 'teacher')}>
                             <Option value="student">Student</Option>
                             <Option value="teacher">Teacher</Option>
                         </Select>
@@ -183,4 +231,4 @@ const Register = () => {
     );
 };
 
-export default Register; 
+export default Register;
