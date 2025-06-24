@@ -1,0 +1,45 @@
+Danh sách các API trong project:
+
+teachers_api.py
+- GET /api/teachers
+- GET /api/teachers/<user_id>/displayName
+
+students_api.py
+- GET /api/students
+- POST /api/students
+- PUT /api/students/<student_id>
+- DELETE /api/students/<student_id>
+- GET /api/classes
+- GET /api/classes/student/<student_id>
+- GET /api/students/<user_id>/displayName
+
+report_api.py
+- GET /api/reports/attendance
+- GET /api/reports/class
+- POST /api/reports/export
+
+register_api.py
+- POST /api/register
+- GET /some-protected-api
+
+profile_api.py
+- GET /api/profile/<user_id>
+- PUT /api/profile/<user_id>
+
+login_api.py
+- POST /api/login
+
+dashboard_api.py
+- GET /api/dashboard/teacher
+- GET /api/dashboard/student
+
+class_api.py
+- GET /api/classes
+- POST /api/classes
+- PUT /api/classes/<class_id>
+- DELETE /api/classes/<class_id>
+- GET /api/classes/student/<studentId>
+- POST /api/classes/<class_id>/add_student
+
+attendance_api.py
+- POST /attendance

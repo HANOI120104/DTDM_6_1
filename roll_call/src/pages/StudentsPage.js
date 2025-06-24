@@ -31,9 +31,10 @@ import { AuthContext } from '../App';
 const { Title } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:5002/api/students";
-const CLASSES_API_URL = "http://localhost:5002/api/classes";
-const USERS_API_URL = "http://localhost:5002/api/students"; // lấy danh sách user role=student
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+const API_URL = `${API_BASE_URL}/api/students`;
+const CLASSES_API_URL = `${API_BASE_URL}/api/classes`;
+const USERS_API_URL = `${API_BASE_URL}/api/students`; // lấy danh sách user role=student
 
 const StudentsPage = () => {
     const { currentUser } = useContext(AuthContext);

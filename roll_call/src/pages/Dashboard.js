@@ -21,12 +21,12 @@ const Dashboard = () => {
                 if (isTeacher) {
                     const teacherId = currentUser.id || currentUser.uid;
                     if (!teacherId) return; // hoặc báo lỗi
-                    const res = await fetch(`http://localhost:5002/api/dashboard/teacher?teacher=${teacherId}`);
+                    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/dashboard/teacher?teacher=${teacherId}`);
                     const data = await res.json();
                     if (data.success) setTeacherData(data);
                 } else {
                     const studentId = currentUser.studentId || currentUser.student_id;
-                    const res = await fetch(`/api/dashboard/student?uid=${studentId}`);
+                    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/dashboard/student?uid=${studentId}`);
                     const data = await res.json();
                     if (data.success) setStudentData(data);
                 }
@@ -43,6 +43,8 @@ const Dashboard = () => {
         { title: "Class", dataIndex: "className", key: "className" },
         { title: "Status", dataIndex: "status", key: "status" },
     ];
+
+    console.log('API_URL:', process.env.REACT_APP_API_URL);
 
     return (
         <div>

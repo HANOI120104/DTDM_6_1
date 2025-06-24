@@ -73,8 +73,9 @@ def get_students():
             students.append(student)
         return jsonify({"success": True, "students": students})
     except Exception as e:
-        print(f"[ERROR /api/students]: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/students GET]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e), "trace": traceback.format_exc()}), 500
 
 # Thêm sinh viên mới vào users và cập nhật mảng students của lớp
 @students_api.route('/api/students', methods=['POST'])
@@ -127,8 +128,9 @@ def add_student_api():
 
         return jsonify({'success': True, 'user_id': user_id})
     except Exception as e:
-        print(f"[ERROR /api/students POST]: {e}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/students POST]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 # Sửa thông tin sinh viên (users)
 @students_api.route('/api/students/<student_id>', methods=['PUT'])
@@ -140,7 +142,9 @@ def update_student(student_id):
         user_ref.update(data)
         return jsonify({"success": True})
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/students/<student_id> PUT]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e), "trace": traceback.format_exc()}), 500
 
 # Xóa sinh viên (users)
 @students_api.route('/api/students/<student_id>', methods=['DELETE'])
@@ -151,7 +155,9 @@ def delete_student(student_id):
         user_ref.delete()
         return jsonify({"success": True})
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/students/<student_id> DELETE]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e), "trace": traceback.format_exc()}), 500
 
 # Lấy danh sách lớp từ collection classes
 @students_api.route('/api/classes', methods=['GET'])
@@ -172,7 +178,9 @@ def get_classes():
             })
         return jsonify({'success': True, 'classes': classes})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/classes GET]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 # Lấy danh sách lớp mà sinh viên tham gia dựa vào mảng students
 @students_api.route('/api/classes/student/<student_id>', methods=['GET'])
@@ -192,7 +200,9 @@ def get_classes_of_student(student_id):
             })
         return jsonify({'success': True, 'classes': classes})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/classes/student/<student_id> GET]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 # Lấy displayName của sinh viên theo userId
 @students_api.route('/api/students/<user_id>/displayName', methods=['GET'])
@@ -206,8 +216,8 @@ def get_student_display_name(user_id):
         else:
             return jsonify({'success': False, 'error': 'Student not found'}), 404
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
+        import traceback
+        print(f"[ERROR /api/students/<user_id>/displayName GET]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 # Không import teachers_api ở đây nữa vì đã tách sang file riêng

@@ -75,14 +75,6 @@ const AppLayout = () => {
             onClick: () => navigate('/profile'),
         },
         {
-            key: 'settings',
-            icon: <SettingOutlined />,
-            label: 'Settings',
-        },
-        {
-            type: 'divider',
-        },
-        {
             key: 'logout',
             icon: <LogoutOutlined />,
             label: 'Logout',
@@ -157,9 +149,6 @@ const AppLayout = () => {
                         />
                     </div>
                     <div className="flex items-center gap-4">
-                        <Badge count={5} size="small">
-                            <Button type="text" icon={<BellOutlined />} shape="circle" />
-                        </Badge>
                         <Dropdown menu={{ items: userMenu }} placement="bottomRight">
                             <div className="cursor-pointer flex items-center gap-2">
                                 <Avatar src={currentUser?.photoURL} icon={<UserOutlined />} />

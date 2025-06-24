@@ -30,6 +30,9 @@ import { AuthContext } from '../App';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
+// const API_BASE_URL = "https://face-attendance-api-767720884282.asia-southeast1.run.app";
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const AttendancePage = () => {
     const { currentUser } = useContext(AuthContext);
     const isTeacher = currentUser?.role === 'teacher';
@@ -60,7 +63,7 @@ const AttendancePage = () => {
                     setLoadingClasses(false);
                     return;
                 }
-                const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/api/classes/student/${sid}`;
+                const apiUrl = `${API_BASE_URL}/api/classes/student/${sid}`;
                 const res = await fetch(apiUrl);
                 const data = await res.json();
                 if (res.ok && data.success) {
@@ -197,7 +200,7 @@ const AttendancePage = () => {
             classId: selectedClass
         };
         try {
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/attendance`, {
+            const res = await fetch(`${API_BASE_URL}/attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -246,7 +249,7 @@ const AttendancePage = () => {
         };
         console.log("Payload gửi lên API:", JSON.stringify(payload, null, 2));
         try {
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/attendance`, {
+            const res = await fetch(`${API_BASE_URL}/attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

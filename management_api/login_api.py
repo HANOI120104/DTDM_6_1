@@ -4,8 +4,6 @@ from google.cloud import firestore
 from werkzeug.security import check_password_hash
 
 
-
-
 login_api = Blueprint('login_api', __name__)
 CORS(login_api)
 

@@ -18,7 +18,6 @@ import {
     IdcardOutlined,
     CalendarOutlined
 } from '@ant-design/icons';
-import { createUserWithEmailAndPassword, updateProfile, getAuth } from "firebase/auth";
 import { auth } from "../../firebase";
 
 const { Title, Text } = Typography;
@@ -34,6 +33,7 @@ const Register = () => {
         setLoading(true);
         setError('');
         try {
+            // Gửi form đăng ký lên backend, backend sẽ tự tạo user trên Firebase Auth và Firestore
             const response = await fetch(process.env.REACT_APP_API_URL + '/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -48,11 +48,10 @@ const Register = () => {
             });
             const data = await response.json();
             if (!response.ok) {
-                setError(data.error || 'Registration failed');
+                setError(data.error + (data.detail ? `: ${data.detail}` : ''));
                 setLoading(false);
                 return;
             }
-            // Sau khi đăng ký thành công, có thể tự động đăng nhập ở đây nếu muốn
             navigate('/login');
         } catch (error) {
             setLoading(false);
@@ -61,30 +60,7 @@ const Register = () => {
     };
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const auth = getAuth();
-                const user = auth.currentUser;
-                if (!user) throw new Error("Not logged in");
-                const token = await user.getIdToken();
-
-                const endpoint = isTeacher ? '/dashboard/teacher' : '/dashboard/student';
-                const res = await fetch(process.env.REACT_APP_API_URL + endpoint, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token
-                    }
-                });
-                if (!res.ok) throw new Error('Fetch failed');
-                const data = await res.json();
-                // ...set state như bình thường...
-            } catch (err) {
-                // ...handle error...
-            }
-            setLoading(false);
-        };
-        fetchData();
+        // Xóa useEffect này vì không cần thiết cho trang đăng ký
     }, [isTeacher]);
 
     return (

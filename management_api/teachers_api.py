@@ -25,7 +25,9 @@ def get_teachers():
             })
         return jsonify({'success': True, 'teachers': teachers})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/teachers GET]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 @teachers_api.route('/api/teachers/<user_id>/displayName', methods=['GET'])
@@ -39,4 +41,6 @@ def get_teacher_display_name(user_id):
         else:
             return jsonify({'success': False, 'error': 'Teacher not found'}), 404
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/teachers/<user_id>/displayName GET]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500

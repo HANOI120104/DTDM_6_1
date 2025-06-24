@@ -37,11 +37,15 @@ function App() {
       // Lấy thông tin user từ Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       let userData = userDoc.exists() ? userDoc.data() : {};
+      // Lưu các trường cần thiết vào currentUser
       setCurrentUser({
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        role: userData.role,
+        studentId: userData.student_id || userData.studentId,
+        teacherId: userData.teacher_id || userData.teacherId,
         ...userData
       });
     } catch (err) {
@@ -68,6 +72,9 @@ function App() {
           email: user.email,
           displayName: user.displayName,
           photoURL: user.photoURL,
+          role: userData.role,
+          studentId: userData.student_id || userData.studentId,
+          teacherId: userData.teacher_id || userData.teacherId,
           ...userData
         });
       } else {

@@ -36,9 +36,11 @@ def get_classes():
             else:
                 c['instructorName'] = ''
             classes.append(c)
-        return jsonify({"success": True, "classes": classes})
+        return jsonify(success=True, classes=classes)
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        import traceback
+        print(traceback.format_exc())
+        return jsonify(success=False, error=str(e)), 500
 
 # Thêm lớp mới
 @class_api.route('/api/classes', methods=['POST'])
@@ -103,7 +105,9 @@ def get_classes_of_student(studentId):
             classes.append(c)
         return jsonify({'success': True, 'classes': classes})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/classes/student/<studentId>]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
     
 
 # Thêm sinh viên vào lớp (chỉ thêm studentId vào mảng students của class, không tạo user mới)
@@ -126,4 +130,6 @@ def add_student_to_class(class_id):
             class_ref.update({'students': students_list})
         return jsonify({'success': True, 'class_id': class_id, 'student_id': studentId})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        import traceback
+        print(f"[ERROR /api/classes/<class_id>/add_student]: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500

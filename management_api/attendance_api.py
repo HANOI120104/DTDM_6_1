@@ -102,5 +102,6 @@ def attendance():
         print(f"[INFO] Attendance API response: recognized={recognized}, similarity={similarity}, doc_ref={doc_ref}")
         return jsonify({'recognized': recognized, 'similarity': similarity, 'doc_ref': str(doc_ref)})
     except Exception as e:
-        print(f"[FATAL] Unknown error: {e}")
-        return jsonify({'error': 'Unknown error', 'details': str(e)}), 500
+        import traceback
+        print(f"[FATAL] Unknown error: {e}\nTraceback: {traceback.format_exc()}")
+        return jsonify({'error': 'Unknown error', 'details': str(e), 'trace': traceback.format_exc()}), 500

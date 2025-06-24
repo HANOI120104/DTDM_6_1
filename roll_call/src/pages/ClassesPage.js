@@ -30,7 +30,8 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
-const API_URL = "http://localhost:5002/api/classes"; // Đổi đúng port backend
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+const API_URL = `${API_BASE_URL}/api/classes`;
 
 // Thêm state cho danh sách giáo viên và lịch học mẫu
 const SCHEDULE_OPTIONS = [
@@ -43,6 +44,9 @@ const SCHEDULE_OPTIONS = [
 const ClassesPage = () => {
     const { currentUser } = useContext(AuthContext);
     const role = currentUser?.role || 'student';
+
+    // Debug log
+    console.log('DEBUG ClassesPage currentUser:', currentUser, 'role:', role);
 
     const [searchText, setSearchText] = useState('');
     const [classes, setClasses] = useState([]);
@@ -57,9 +61,15 @@ const ClassesPage = () => {
         try {
             const res = await fetch(API_URL);
             const data = await res.json();
-            if (data.success) setClasses(data.classes);
-            else message.error("Failed to fetch classes");
+            if (data.success) {
+                setClasses(data.classes);
+                console.log('DEBUG classes:', data.classes);
+            } else {
+                setClasses([]);
+                message.error("Failed to fetch classes");
+            }
         } catch (err) {
+            setClasses([]);
             message.error("Network error");
         }
     };
@@ -71,8 +81,12 @@ const ClassesPage = () => {
         try {
             const res = await fetch(`${API_URL}/student/${sid}`);
             const data = await res.json();
-            if (data.success) setClasses(data.classes);
-            else setClasses([]);
+            if (data.success) {
+                setClasses(data.classes);
+                console.log('DEBUG classes (student):', data.classes);
+            } else {
+                setClasses([]);
+            }
         } catch {
             setClasses([]);
         }
@@ -85,14 +99,13 @@ const ClassesPage = () => {
         } else {
             fetchClasses();
         }
-        // eslint-disable-next-line
     }, [role, currentUser]);
 
     // Lấy danh sách giáo viên từ backend (giả sử API: /api/teachers)
     useEffect(() => {
         const fetchTeachers = async () => {
             try {
-                const res = await fetch('http://localhost:5002/api/teachers');
+                const res = await fetch(`${API_BASE_URL}/api/teachers`);
                 const data = await res.json();
                 if (data.success) {
                     // Nếu thiếu displayName, fetch từng teacher bổ sung displayName
@@ -100,7 +113,7 @@ const ClassesPage = () => {
                         data.teachers.map(async (t) => {
                             if (!t.displayName) {
                                 try {
-                                    const res2 = await fetch(`http://localhost:5002/api/teachers/${t.id}/displayName`);
+                                    const res2 = await fetch(`${API_BASE_URL}/api/teachers/${t.id}/displayName`);
                                     const data2 = await res2.json();
                                     return { ...t, displayName: data2.displayName || t.name || t.id };
                                 } catch {
@@ -127,9 +140,16 @@ const ClassesPage = () => {
             (classItem.instructorName && classItem.instructorName.toLowerCase().includes(searchText.toLowerCase()))
     );
 
-    // Lọc lớp theo teacher (chỉ các lớp do teacher hiện tại tạo)
+    // Lọc lớp theo giáo viên hiện tại (my classes cho teacher)
     const myClasses = role === 'teacher'
-        ? classes.filter(c => c.instructor && currentUser && c.instructor === currentUser.id)
+        ? classes.filter(c => {
+            const instructor = c.instructor;
+            return instructor && (
+                instructor === currentUser.uid ||
+                instructor === currentUser.teacherId ||
+                instructor === currentUser.teacher_id
+            );
+        })
         : classes; // với sinh viên, classes đã là danh sách lớp của mình
 
     // Show modal for adding/editing class

@@ -4,6 +4,8 @@ import { Table, Select, Card, Typography } from "antd";
 const { Option } = Select;
 const { Title } = Typography;
 
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 const ReportsPage = () => {
     const [classList, setClassList] = useState([]);
     const [selectedClass, setSelectedClass] = useState("all");
@@ -14,7 +16,7 @@ const ReportsPage = () => {
     useEffect(() => {
         const fetchClasses = async () => {
             try {
-                const res = await fetch("http://localhost:5002/api/classes");
+                const res = await fetch(`${API_BASE_URL}/api/classes`);
                 const data = await res.json();
                 if (data.success) setClassList(data.classes);
                 else setClassList([]);
@@ -30,7 +32,7 @@ const ReportsPage = () => {
         const fetchReport = async () => {
             setLoading(true);
             try {
-                let url = "http://localhost:5002/api/reports/attendance";
+                let url = `${API_BASE_URL}/api/reports/attendance`;
                 if (selectedClass !== "all") url += `?class=${selectedClass}`;
                 const res = await fetch(url);
                 const data = await res.json();

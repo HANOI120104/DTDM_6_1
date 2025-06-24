@@ -1,3 +1,0 @@
-from .teachers_api import teachers_api
-
-# ...existing code...

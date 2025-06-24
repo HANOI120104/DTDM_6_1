@@ -4,6 +4,7 @@ import { UserOutlined } from '@ant-design/icons';
 import { AuthContext } from '../App';
 
 const { Title } = Typography;
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const ProfilePage = () => {
     const { currentUser } = useContext(AuthContext);
@@ -16,7 +17,7 @@ const ProfilePage = () => {
             if (!currentUser?.uid) return;
             setLoading(true);
             try {
-                const res = await fetch(`http://localhost:5002/api/profile/${currentUser.uid}`);
+                const res = await fetch(`${API_BASE_URL}/api/profile/${currentUser.uid}`);
                 const data = await res.json();
                 if (data.success) setProfile(data.profile);
                 else message.error(data.error || "Failed to load profile");
@@ -60,7 +61,7 @@ const ProfilePage = () => {
                             bordered
                             column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
                         >
-                            <Descriptions.Item label="User ID">{profile.uid}</Descriptions.Item>
+                            <Descriptions.Item label="User ID">{profile.user_id}</Descriptions.Item>
                             <Descriptions.Item label="Email">{profile.email}</Descriptions.Item>
                             <Descriptions.Item label="Role">{role === 'teacher' ? 'Teacher' : 'Student'}</Descriptions.Item>
                             <Descriptions.Item label="Status">
