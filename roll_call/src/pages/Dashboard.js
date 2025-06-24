@@ -19,7 +19,9 @@ const Dashboard = () => {
         const fetchDashboard = async () => {
             try {
                 if (isTeacher) {
-                    const res = await fetch("http://localhost:5002/api/dashboard/teacher?teacher=" + currentUser.id);
+                    const teacherId = currentUser.id || currentUser.uid;
+                    if (!teacherId) return; // hoặc báo lỗi
+                    const res = await fetch(`http://localhost:5002/api/dashboard/teacher?teacher=${teacherId}`);
                     const data = await res.json();
                     if (data.success) setTeacherData(data);
                 } else {

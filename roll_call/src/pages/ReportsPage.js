@@ -34,7 +34,7 @@ const ReportsPage = () => {
                 if (selectedClass !== "all") url += `?class=${selectedClass}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.success) setReport(data.report);
+                if (data.success) setReport(data.data);
                 else setReport([]);
             } catch {
                 setReport([]);
@@ -47,10 +47,10 @@ const ReportsPage = () => {
     const columns = [
         { title: "Student ID", dataIndex: "studentId", key: "studentId" },
         { title: "Name", dataIndex: "name", key: "name" },
-        { title: "Total Sessions", dataIndex: "total", key: "total" },
         { title: "Present", dataIndex: "present", key: "present" },
         { title: "Absent", dataIndex: "absent", key: "absent" },
-        { title: "Attendance Rate", dataIndex: "rate", key: "rate", render: (rate) => `${rate}%` },
+        { title: "Late", dataIndex: "late", key: "late" },
+        { title: "Attendance Rate", dataIndex: "attendanceRate", key: "attendanceRate", render: (rate) => `${rate}%` },
     ];
 
     return (
