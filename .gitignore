@@ -1,8 +1,56 @@
-# Bỏ file cấu hình và secrets
-.env
+# ====== Common ======
+*.env
+.env*
 *.json
-*.key
 *.pem
+*.key
+*.log
+.DS_Store
+Thumbs.db
 
-# Bỏ thư mục chứa credentials riêng
-credentials/
+# ====== Python ======
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+
+# ====== Node.js / React ======
+node_modules/
+dist/
+build/
+coverage/
+
+# ====== VSCode/IDE ======
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ====== OS files ======
+.DS_Store
+Thumbs.db
+
+# ====== Project specific ======
+# Google Cloud key (đã có trong management_api/.gitignore, nhắc lại cho chắc)
+management_api/face-attendance-*.json
+
+# Ignore env/example in subfolders
+management_api/.env
+management_api/.env.example
+roll_call/.env
+
+# Ignore lock files (nếu không muốn commit)
+# package-lock.json
+# yarn.lock
+
+# Ignore test/build output
+roll_call/build/
+roll_call/coverage/
+
+# Ignore misc
+roll_call/.pnp
+roll_call/.pnp.js
+
+# End of .gitignore
