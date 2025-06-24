@@ -1,0 +1,8 @@
+# Bỏ file cấu hình và secrets
+.env
+*.json
+*.key
+*.pem
+
+# Bỏ thư mục chứa credentials riêng
+credentials/
