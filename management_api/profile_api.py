@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, Blueprint
 from flask_cors import CORS
+import os
 from google.cloud import firestore
 
 
@@ -9,9 +10,11 @@ CORS(app)
 profile_api = Blueprint('profile_api', __name__)
 CORS(profile_api)
 
+# Đường dẫn mới tới file service account key
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
 # Khởi tạo Firestore client
-
-db = firestore.Client(project="face-attendance-463704")
+db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
 # Lấy thông tin profile theo user id (uid)
 @profile_api.route('/api/profile/<user_id>', methods=['GET'])

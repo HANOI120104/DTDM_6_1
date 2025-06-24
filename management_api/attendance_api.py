@@ -20,7 +20,11 @@ rekognition = boto3.client(
 
 # Google Cloud config
 storage_client = storage.Client()
-db = firestore.Client()
+# Đường dẫn mới tới file service account key
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+# Khi khởi tạo Firestore client:
+db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
 def save_attendance_image(student_id, image_base64):
     bucket_name = os.environ.get('GCS_BUCKET_NAME')

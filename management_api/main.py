@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
+from google.cloud import firestore
 
-# Nạp biến môi trường trước khi import các module khác
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
+load_dotenv()
 
 from flask import Flask
 from flask_cors import CORS
@@ -18,6 +18,13 @@ from teachers_api import teachers_api
 
 app = Flask(__name__)
 CORS(app)
+
+# Lấy đường dẫn file key và project_id từ biến môi trường
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+
+# Khởi tạo Firestore client
+db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
 # Đăng ký các blueprint
 app.register_blueprint(report_api)

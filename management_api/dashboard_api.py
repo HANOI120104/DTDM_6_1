@@ -1,13 +1,17 @@
 # management_api/dashboard_api.py
 from flask import Blueprint, request, jsonify
+import os
 from google.cloud import firestore
 
 
 dashboard_api = Blueprint('dashboard_api', __name__)
 
-# Khởi tạo Firestore client (chỉ cần 1 lần ở đầu file)
+# Đường dẫn mới tới file service account key
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
 
-db = firestore.Client(project="face-attendance-463704")
+# Khởi tạo Firestore client (chỉ cần 1 lần ở đầu file)
+db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
 @dashboard_api.route('/api/dashboard/teacher', methods=['GET'])
 def dashboard_teacher():

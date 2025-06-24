@@ -54,13 +54,12 @@ const AttendancePage = () => {
         const fetchMyClasses = async () => {
             setLoadingClasses(true);
             try {
-                if (!currentUser?.studentId && !currentUser?.student_id) {
+                const sid = currentUser.studentId || currentUser.student_id;
+                if (!sid) {
                     setMyClasses([]);
                     setLoadingClasses(false);
                     return;
                 }
-                // Ưu tiên lấy studentId, fallback sang student_id
-                const sid = currentUser.studentId || currentUser.student_id;
                 const apiUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/api/classes/student/${sid}`;
                 const res = await fetch(apiUrl);
                 const data = await res.json();
@@ -182,22 +181,41 @@ const AttendancePage = () => {
     };
 
     // Process the captured image for face recognition
-    const processImage = () => {
+    const processImage = async () => {
         if (!capturedImage || !selectedClass) {
             message.error('Please capture an image and select a class');
             return;
         }
-
         setProcessing(true);
 
-        // Simulate AI processing
-        setTimeout(() => {
+        // Lấy đúng studentId (ưu tiên student_id, fallback studentId)
+        const studentId = currentUser?.student_id || currentUser?.studentId;
+
+        const payload = {
+            imageBase64: capturedImage,
+            studentId: studentId,
+            classId: selectedClass
+        };
+        try {
+            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5002'}/attendance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
             setProcessing(false);
-            setRecognitionComplete(true);
-            // XÓA HOÀN TOÀN MOCK_RECOGNIZED_STUDENTS và mọi chỗ sử dụng nó
-            setRecognizedStudents([]);
-            setCurrentStep(2);
-        }, 3000);
+            if (res.ok && data.recognized !== undefined) {
+                setRecognitionComplete(true);
+                setRecognizedStudents([{ ...payload, recognized: data.recognized, similarity: data.similarity, image_url: data.image_url }]);
+                setCurrentStep(2);
+                message.success(data.recognized ? 'Attendance recorded!' : 'Face not recognized');
+            } else {
+                message.error(data.error || 'Attendance failed');
+            }
+        } catch (err) {
+            setProcessing(false);
+            message.error('Network error');
+        }
     };
 
     // Reset the whole process

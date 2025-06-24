@@ -7,6 +7,7 @@
 *.log
 .DS_Store
 Thumbs.db
+*.yaml
 
 # ====== Python ======
 __pycache__/

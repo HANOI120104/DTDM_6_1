@@ -25,7 +25,8 @@ const Dashboard = () => {
                     const data = await res.json();
                     if (data.success) setTeacherData(data);
                 } else {
-                    const res = await fetch("http://localhost:5002/api/dashboard/student?student=" + (currentUser.studentId || currentUser.student_id));
+                    const studentId = currentUser.studentId || currentUser.student_id;
+                    const res = await fetch(`/api/dashboard/student?uid=${studentId}`);
                     const data = await res.json();
                     if (data.success) setStudentData(data);
                 }

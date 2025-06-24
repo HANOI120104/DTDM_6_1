@@ -4,13 +4,19 @@ from flask import Blueprint, request, jsonify
 from flask_cors import CORS
 from google.cloud import firestore
 from werkzeug.security import generate_password_hash
+import os
 
 register_api = Blueprint('register_api', __name__)
 CORS(register_api)
 
-cred = credentials.Certificate(r'D:\2024\DTDM\DTDM_6_1\management_api\face-attendance-463704-8823b47082ba.json')
+cred = credentials.Certificate(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
 firebase_admin.initialize_app(cred)
-db = firestore.Client()
+
+# Đường dẫn mới tới file service account key
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+# Khi khởi tạo Firestore client:
+db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
 def verify_firebase_token():
     auth_header = request.headers.get('Authorization')

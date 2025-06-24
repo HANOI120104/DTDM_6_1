@@ -1,5 +1,6 @@
 from google.cloud import firestore, storage
 from datetime import datetime
+import os
 
 import base64
 import re
@@ -9,7 +10,10 @@ from flask_cors import CORS
 
 
 # Config
-BUCKET_NAME = "face-attendance-images"  # Thay bằng tên bucket thật
+BUCKET_NAME = "face-attendance"  # Thay bằng tên bucket thật
+# Đường dẫn mới tới file service account key
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
 
 # Hàm upload ảnh base64 lên GCS
 def upload_student_image(student_id, image_base64):
@@ -25,7 +29,8 @@ def upload_student_image(student_id, image_base64):
     return f"https://storage.googleapis.com/{BUCKET_NAME}/students/{student_id}.jpg"
 
 def add_student(student_id, name, email, class_name, status, image_base64):
-    db = firestore.Client(project="face-attendance-463704")
+    # Khi khởi tạo Firestore client:
+    db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
     image_url = upload_student_image(student_id, image_base64)
     student = {
         'student_id': student_id,
@@ -50,7 +55,7 @@ CORS(students_api)
 @students_api.route('/api/students', methods=['GET'])
 def get_students():
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         users_ref = db.collection('users').where('role', '==', 'student')
         docs = users_ref.stream()
         students = []
@@ -68,6 +73,7 @@ def get_students():
             students.append(student)
         return jsonify({"success": True, "students": students})
     except Exception as e:
+        print(f"[ERROR /api/students]: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 # Thêm sinh viên mới vào users và cập nhật mảng students của lớp
@@ -84,7 +90,7 @@ def add_student_api():
     avatar_url = ''
 
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
         # Upload ảnh lên GCS nếu có
         if image_base64:
@@ -121,6 +127,7 @@ def add_student_api():
 
         return jsonify({'success': True, 'user_id': user_id})
     except Exception as e:
+        print(f"[ERROR /api/students POST]: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Sửa thông tin sinh viên (users)
@@ -128,7 +135,7 @@ def add_student_api():
 def update_student(student_id):
     data = request.json
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         user_ref = db.collection('users').document(student_id)
         user_ref.update(data)
         return jsonify({"success": True})
@@ -139,7 +146,7 @@ def update_student(student_id):
 @students_api.route('/api/students/<student_id>', methods=['DELETE'])
 def delete_student(student_id):
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         user_ref = db.collection('users').document(student_id)
         user_ref.delete()
         return jsonify({"success": True})
@@ -150,7 +157,7 @@ def delete_student(student_id):
 @students_api.route('/api/classes', methods=['GET'])
 def get_classes():
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         classes_ref = db.collection('classes')
         docs = classes_ref.stream()
         classes = []
@@ -171,7 +178,7 @@ def get_classes():
 @students_api.route('/api/classes/student/<student_id>', methods=['GET'])
 def get_classes_of_student(student_id):
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         classes_ref = db.collection('classes').where('students', 'array_contains', student_id)
         docs = classes_ref.stream()
         classes = []
@@ -191,7 +198,7 @@ def get_classes_of_student(student_id):
 @students_api.route('/api/students/<user_id>/displayName', methods=['GET'])
 def get_student_display_name(user_id):
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         user_doc = db.collection('users').document(user_id).get()
         if user_doc.exists and user_doc.to_dict().get('role') == 'student':
             display_name = user_doc.to_dict().get('displayName', '')

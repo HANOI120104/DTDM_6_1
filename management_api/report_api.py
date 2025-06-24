@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+import os
 from google.cloud import firestore
 
 report_api = Blueprint('report_api', __name__)
@@ -7,7 +8,9 @@ report_api = Blueprint('report_api', __name__)
 @report_api.route('/api/reports/attendance', methods=['GET'])
 def get_attendance_report():
     class_id = request.args.get('class')
-    db = firestore.Client()
+    SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+    db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
     attendance_ref = db.collection('attendance')
     query = attendance_ref
     if class_id:
@@ -53,7 +56,9 @@ def get_attendance_report():
 # Lấy báo cáo tổng quan các lớp
 @report_api.route('/api/reports/class', methods=['GET'])
 def get_class_attendance():
-    db = firestore.Client()
+    SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+    db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
     classes_ref = db.collection('classes')
     attendance_ref = db.collection('attendance')
     classes_docs = classes_ref.stream()

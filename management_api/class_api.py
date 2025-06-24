@@ -5,7 +5,10 @@ import os
 
 class_api = Blueprint('class_api', __name__)
 
-db = firestore.Client(project="face-attendance-463704")
+# Đường dẫn mới tới file service account key
+SERVICE_ACCOUNT_KEY_PATH = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID")
+db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
 
 # Lấy danh sách lớp
 @class_api.route('/api/classes', methods=['GET'])
@@ -87,10 +90,11 @@ def delete_class(class_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # Lấy danh sách lớp mà sinh viên tham gia (dựa vào mảng students)
-@class_api.route('/api/classes/student/<student_id>', methods=['GET'])
-def get_classes_of_student(student_id):
+@class_api.route('/api/classes/student/<studentId>', methods=['GET'])
+def get_classes_of_student(studentId):
     try:
-        classes_ref = db.collection('classes').where('students', 'array_contains', student_id)
+        # studentId phải là mã sinh viên, không phải email/uid
+        classes_ref = db.collection('classes').where('students', 'array_contains', studentId)
         docs = classes_ref.stream()
         classes = []
         for doc in docs:
@@ -106,20 +110,20 @@ def get_classes_of_student(student_id):
 @class_api.route('/api/classes/<class_id>/add_student', methods=['POST'])
 def add_student_to_class(class_id):
     data = request.get_json()
-    student_id = data.get('student_id')
-    if not student_id:
-        return jsonify({'success': False, 'error': 'Missing student_id'}), 400
+    studentId = data.get('studentId') or data.get('student_id')
+    if not studentId:
+        return jsonify({'success': False, 'error': 'Missing studentId'}), 400
     try:
-        db = firestore.Client(project="face-attendance-463704")
+        db = firestore.Client.from_service_account_json(SERVICE_ACCOUNT_KEY_PATH, project=FIREBASE_PROJECT_ID)
         class_ref = db.collection('classes').document(class_id)
         class_doc = class_ref.get()
         if not class_doc.exists:
             return jsonify({'success': False, 'error': 'Class not found'}), 404
         class_data = class_doc.to_dict()
         students_list = class_data.get('students', [])
-        if student_id not in students_list:
-            students_list.append(student_id)
+        if studentId not in students_list:
+            students_list.append(studentId)
             class_ref.update({'students': students_list})
-        return jsonify({'success': True, 'class_id': class_id, 'student_id': student_id})
+        return jsonify({'success': True, 'class_id': class_id, 'student_id': studentId})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
